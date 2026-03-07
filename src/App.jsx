@@ -77,16 +77,178 @@ const FALLBACK_FORTUNES = [
   "You will make a wise decision, surprisingly."
 ]
 
-// Sketchfab 3D Embed Iframe
-const CookieIframe = () => (
-  <iframe
-    title="Fortune Cookie"
-    frameBorder="0"
-    allowFullScreen
-    allow="autoplay; fullscreen; xr-spatial-tracking"
-    src="https://sketchfab.com/models/5a1c394155b14572a28ae9de39b0b1b3/embed?autostart=1&ui_infos=0&ui_watermark=0&ui_controls=0&ui_stop=0&transparent=1"
-    style={{ width: '100%', height: '100%', pointerEvents: 'none', border: 'none' }}
-  />
+// Premium SVG Fortune Cookie with 3D shading
+const CookieSVG = () => (
+  <svg viewBox="0 0 240 200" xmlns="http://www.w3.org/2000/svg" style={{ overflow: 'visible' }}>
+    <defs>
+      {/* Main gradient — golden brown 3D look */}
+      <radialGradient id="cookieBody" cx="45%" cy="38%" r="58%" fx="35%" fy="30%">
+        <stop offset="0%" stopColor="#F5C842" />
+        <stop offset="30%" stopColor="#E8A830" />
+        <stop offset="65%" stopColor="#C9873A" />
+        <stop offset="100%" stopColor="#8B5E1A" />
+      </radialGradient>
+      {/* Edge darkening */}
+      <radialGradient id="cookieEdge" cx="50%" cy="50%" r="50%">
+        <stop offset="60%" stopColor="transparent" />
+        <stop offset="100%" stopColor="#5C3000" stopOpacity="0.5" />
+      </radialGradient>
+      {/* Inner highlight */}
+      <radialGradient id="cookieHighlight" cx="35%" cy="30%" r="40%">
+        <stop offset="0%" stopColor="#FFF5C0" stopOpacity="0.6" />
+        <stop offset="100%" stopColor="#FFF5C0" stopOpacity="0" />
+      </radialGradient>
+      {/* Drop shadow filter */}
+      <filter id="cookieShadow" x="-20%" y="-20%" width="140%" height="160%">
+        <feDropShadow dx="0" dy="12" stdDeviation="14" floodColor="#000" floodOpacity="0.5" />
+      </filter>
+      {/* Subtle inner glow */}
+      <filter id="innerGlow">
+        <feGaussianBlur stdDeviation="3" result="blur" />
+        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+      </filter>
+    </defs>
+
+    {/* Drop shadow layer */}
+    <ellipse cx="120" cy="192" rx="70" ry="10" fill="#000" opacity="0.3" />
+
+    {/* Cookie body — classic folded shape */}
+    <g filter="url(#cookieShadow)">
+      {/* Left wing */}
+      <path
+        d="M 120 55
+           C 60 52, 28 78, 32 118
+           C 35 148, 62 168, 90 170
+           C 105 172, 115 165, 120 155"
+        fill="url(#cookieBody)"
+      />
+      {/* Right wing */}
+      <path
+        d="M 120 55
+           C 180 52, 212 78, 208 118
+           C 205 148, 178 168, 150 170
+           C 135 172, 125 165, 120 155"
+        fill="url(#cookieBody)"
+      />
+      {/* Center fold / pinch */}
+      <path
+        d="M 120 55 C 110 90, 108 115, 120 155
+           C 132 115, 130 90, 120 55"
+        fill="#A06828"
+        opacity="0.7"
+      />
+    </g>
+
+    {/* Highlight overlay */}
+    <path
+      d="M 120 55
+         C 60 52, 28 78, 32 118
+         C 35 148, 62 168, 90 170
+         C 105 172, 115 165, 120 155
+         C 132 115, 130 90, 120 55"
+      fill="url(#cookieHighlight)"
+    />
+    <path
+      d="M 120 55
+         C 180 52, 212 78, 208 118
+         C 205 148, 178 168, 150 170
+         C 135 172, 125 165, 120 155
+         C 132 115, 130 90, 120 55"
+      fill="url(#cookieHighlight)"
+    />
+
+    {/* Edge darkening */}
+    <path
+      d="M 120 55
+         C 60 52, 28 78, 32 118
+         C 35 148, 62 168, 90 170
+         C 105 172, 115 165, 120 155
+         C 125 165, 135 172, 150 170
+         C 178 168, 205 148, 208 118
+         C 212 78, 180 52, 120 55 Z"
+      fill="url(#cookieEdge)"
+    />
+
+    {/* Fold crease lines */}
+    <path d="M 120 55 C 114 90, 112 120, 120 155"
+      stroke="#7A4E10" strokeWidth="1.5" fill="none" opacity="0.8" strokeLinecap="round" />
+    <path d="M 120 55 C 126 90, 128 120, 120 155"
+      stroke="#C8902A" strokeWidth="1" fill="none" opacity="0.5" strokeLinecap="round" />
+
+    {/* Left wing inner crease */}
+    <path d="M 100 60 C 75 75, 62 110, 75 148"
+      stroke="#8B6020" strokeWidth="1.2" fill="none" opacity="0.4" strokeLinecap="round" />
+
+    {/* Right wing inner crease */}
+    <path d="M 140 60 C 165 75, 178 110, 165 148"
+      stroke="#8B6020" strokeWidth="1.2" fill="none" opacity="0.4" strokeLinecap="round" />
+
+    {/* Paper slip peeking */}
+    <rect x="112" y="72" width="16" height="22" rx="1"
+      fill="#F5F0E8" opacity="0.85"
+      stroke="#DDD5C0" strokeWidth="0.5" />
+    <line x1="115" y1="78" x2="125" y2="78" stroke="#C8B88A" strokeWidth="0.8" opacity="0.6" />
+    <line x1="115" y1="83" x2="125" y2="83" stroke="#C8B88A" strokeWidth="0.8" opacity="0.6" />
+    <line x1="115" y1="88" x2="125" y2="88" stroke="#C8B88A" strokeWidth="0.8" opacity="0.6" />
+  </svg>
+)
+
+// Left half only (for break animation)
+const CookieLeftSVG = () => (
+  <svg viewBox="0 0 240 200" xmlns="http://www.w3.org/2000/svg" style={{ overflow: 'visible' }}>
+    <defs>
+      <radialGradient id="cbL" cx="40%" cy="38%" r="65%" fx="30%" fy="28%">
+        <stop offset="0%" stopColor="#F5C842" />
+        <stop offset="35%" stopColor="#E8A830" />
+        <stop offset="70%" stopColor="#C9873A" />
+        <stop offset="100%" stopColor="#8B5E1A" />
+      </radialGradient>
+      <filter id="shadowL" x="-30%" y="-20%" width="160%" height="160%">
+        <feDropShadow dx="-4" dy="8" stdDeviation="10" floodColor="#000" floodOpacity="0.4" />
+      </filter>
+    </defs>
+    <g filter="url(#shadowL)">
+      <path
+        d="M 120 55
+           C 60 52, 28 78, 32 118
+           C 35 148, 62 168, 90 170
+           C 105 172, 115 165, 120 155
+           C 114 120, 112 90, 120 55"
+        fill="url(#cbL)"
+      />
+    </g>
+    <path d="M 120 55 C 114 90, 112 120, 120 155"
+      stroke="#7A4E10" strokeWidth="1.5" fill="none" opacity="0.8" strokeLinecap="round" />
+  </svg>
+)
+
+// Right half only
+const CookieRightSVG = () => (
+  <svg viewBox="0 0 240 200" xmlns="http://www.w3.org/2000/svg" style={{ overflow: 'visible' }}>
+    <defs>
+      <radialGradient id="cbR" cx="60%" cy="38%" r="65%" fx="70%" fy="28%">
+        <stop offset="0%" stopColor="#F5C842" />
+        <stop offset="35%" stopColor="#E8A830" />
+        <stop offset="70%" stopColor="#C9873A" />
+        <stop offset="100%" stopColor="#8B5E1A" />
+      </radialGradient>
+      <filter id="shadowR" x="-30%" y="-20%" width="160%" height="160%">
+        <feDropShadow dx="4" dy="8" stdDeviation="10" floodColor="#000" floodOpacity="0.4" />
+      </filter>
+    </defs>
+    <g filter="url(#shadowR)">
+      <path
+        d="M 120 55
+           C 180 52, 212 78, 208 118
+           C 205 148, 178 168, 150 170
+           C 135 172, 125 165, 120 155
+           C 128 120, 130 90, 120 55"
+        fill="url(#cbR)"
+      />
+    </g>
+    <path d="M 120 55 C 126 90, 128 120, 120 155"
+      stroke="#C8902A" strokeWidth="1" fill="none" opacity="0.8" strokeLinecap="round" />
+  </svg>
 )
 
 export default function App() {
@@ -181,23 +343,58 @@ export default function App() {
         onClick={handleCrack}
         style={{ width: 280, height: 240, WebkitTapHighlightColor: 'transparent' }}
       >
-        <AnimatePresence mode="popLayout">
-          {status !== 'idle' && status !== 'shaking' && status !== 'breaking' && status !== 'loading' && status !== 'revealed' ? null : (
+        <AnimatePresence mode="wait">
+          {(status === 'idle' || status === 'shaking') && (
             <motion.div
+              key="whole-cookie"
               initial={{ scale: 0.85, opacity: 0 }}
-              animate={
-                status === 'idle' ? { scale: 1, opacity: 1, y: [0, -8, 0] } :
-                  status === 'shaking' ? { scale: 1, opacity: 1, x: [0, -6, 6, -5, 5, -3, 3, 0], rotate: [0, -2, 2, -1.5, 1.5, 0] } :
-                    { scale: 1.5, opacity: 0, filter: 'blur(10px)' }
+              animate={status === 'shaking' ? {
+                scale: 1,
+                opacity: 1,
+                x: [0, -6, 6, -5, 5, -3, 3, 0],
+                rotate: [0, -2, 2, -1.5, 1.5, 0],
+              } : {
+                scale: 1,
+                opacity: 1,
+                y: [0, -8, 0],
+              }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={status === 'shaking'
+                ? { duration: 0.4, ease: 'easeInOut' }
+                : { y: { duration: 3.5, repeat: Infinity, ease: 'easeInOut' }, opacity: { duration: 0.4 }, scale: { duration: 0.4 } }
               }
-              transition={
-                status === 'idle' ? { y: { duration: 3.5, repeat: Infinity, ease: 'easeInOut' } } :
-                  status === 'shaking' ? { duration: 0.4, ease: 'easeInOut' } :
-                    { duration: 0.6 }
-              }
-              style={{ width: '100%', height: '100%', pointerEvents: 'none' }}
+              style={{ width: '100%', height: '100%' }}
             >
-              <CookieIframe />
+              <CookieSVG />
+            </motion.div>
+          )}
+
+          {(status === 'breaking' || status === 'loading' || status === 'revealed') && (
+            <motion.div
+              key="broken-cookie"
+              initial={{ opacity: 1 }}
+              animate={{ opacity: 0 }}
+              transition={{ duration: 0.7, delay: 0.4 }}
+              style={{ width: '100%', height: '100%', position: 'relative' }}
+            >
+              {/* Left half */}
+              <motion.div
+                initial={{ x: 0, y: 0, rotate: 0, opacity: 1 }}
+                animate={{ x: -130, y: -50, rotate: -40, opacity: 0 }}
+                transition={{ duration: 0.65, ease: [0.4, 0, 0.2, 1] }}
+                style={{ position: 'absolute', width: '100%', height: '100%' }}
+              >
+                <CookieLeftSVG />
+              </motion.div>
+              {/* Right half */}
+              <motion.div
+                initial={{ x: 0, y: 0, rotate: 0, opacity: 1 }}
+                animate={{ x: 130, y: -50, rotate: 40, opacity: 0 }}
+                transition={{ duration: 0.65, ease: [0.4, 0, 0.2, 1] }}
+                style={{ position: 'absolute', width: '100%', height: '100%' }}
+              >
+                <CookieRightSVG />
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
