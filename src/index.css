@@ -9,7 +9,13 @@
 
 @layer base {
   body {
-    @apply bg-matte-black text-off-white font-playfair m-0 p-0 overflow-hidden h-[100dvh] flex justify-center items-center;
+    background: #f5f3ee;
+    color: #2a1a06;
+    font-family: 'Playfair Display', serif;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    height: 100dvh;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }

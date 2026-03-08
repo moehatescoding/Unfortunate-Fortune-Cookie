@@ -1,8 +1,8 @@
-import React, { useState, useCallback, useRef, useEffect, Suspense } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Scene } from './components/Scene'
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 
-const FALLBACK_FORTUNES = [
+// ─── Fortune pool ─────────────────────────────────────────────────────────────
+const FORTUNES = [
   "You will soon receive good news. It might be meant for someone else.",
   "Today is a great day to start something new. Tomorrow works too.",
   "Someone will appreciate your honesty. Eventually.",
@@ -10,252 +10,398 @@ const FALLBACK_FORTUNES = [
   "A brilliant idea will come to you. Probably in the shower.",
   "Your phone battery will last longer today. Unlikely, but hopeful.",
   "You will soon remember something important. Three hours too late.",
-  "Someone will ask for your advice. They won’t follow it.",
+  "Someone will ask for your advice. They won't follow it.",
   "A small problem will solve itself. Mostly because you ignored it.",
   "Today is a good day to clean your room. Or at least think about it.",
   "You will soon check your phone again. Yes, right now.",
-  "Someone will laugh at your joke. Out of politeness.",
   "Your cooking will impress someone. Lower expectations first.",
   "You will soon find what you were looking for. In the last place you check.",
   "A calm and peaceful moment is coming. Enjoy it quickly.",
   "You will soon learn a valuable lesson. The hard way.",
-  "Someone will return something you lost. Hopefully.",
-  "Your alarm clock will test your character tomorrow morning.",
   "A friend will need your help. With moving furniture.",
   "Your confidence will grow today. Your skills are still loading.",
-  "You will soon discover why they invented the snooze button.",
-  "A message will arrive soon. It will say “Hi.”",
+  "A message will arrive soon. It will say 'Hi.'",
   "Your internet will work perfectly today. For five minutes.",
   "Someone will remember you today. When they need something.",
-  "You will finally organize your life. Starting with one drawer.",
   "You will soon solve a problem. It will create two new ones.",
-  "Today is a good day to try something new. Panic is optional.",
   "Someone will remember your name today. After asking twice.",
   "Your future looks promising. Details are unclear.",
   "A good habit will begin today. It will end tomorrow.",
-  "You will soon hear good news. It will be about someone else.",
-  "Your phone will ring soon. It’s probably spam.",
-  "A calm moment is coming. Don’t ruin it.",
-  "You will finally understand something important. Briefly.",
-  "Today is a good day to stay positive. Try again later.",
-  "Someone will laugh at your joke. Mostly out of kindness.",
+  "Your phone will ring soon. It's probably spam.",
+  "A calm moment is coming. Don't ruin it.",
   "Your plans will go smoothly. After several adjustments.",
-  "You will soon remember why you walked into the room. Maybe.",
   "A message you are waiting for will arrive. Manage expectations.",
   "Someone will give you useful advice. You will ignore it.",
-  "Your memory will improve today. You forgot why.",
   "A new opportunity will appear. Please notice it.",
   "Your day will improve soon. Slightly.",
   "Someone will agree with you today. By accident.",
   "You will find something you lost. It was under you.",
-  "Someone will need your help today. With heavy furniture.",
-  "Your schedule will finally make sense. On paper.",
   "A great idea will visit your mind. It will not stay long.",
   "You will soon receive a compliment. It will confuse you.",
-  "Today is a good day to take a break. From planning to take a break.",
-  "Someone will ask how you are doing. Think carefully.",
   "Your luck will improve today. Marginally.",
   "You will soon realize the obvious. Everyone else did earlier.",
   "You will be happy, for five minutes.",
   "Everything will work out, briefly.",
-  "Your luck will improve, slightly.",
   "Today will be productive, for a moment.",
   "You will feel motivated, until lunch.",
   "Your life will make sense, temporarily.",
-  "A great idea will come to you, then disappear.",
   "You will feel confident, right before the mistake.",
   "Your plans will succeed, in theory.",
   "Today will be peaceful, until you check your phone.",
-  "You will remember something important, too late.",
-  "Your future looks bright, lower the brightness.",
-  "You will find the answer, then doubt it.",
+  "Your future looks bright. Lower the brightness.",
   "Your discipline will return, briefly.",
   "Everything will be clear, for a second.",
   "Someone will praise you, sarcastically.",
-  "You will understand everything, then forget it.",
   "Your patience will pay off, eventually maybe.",
+  "You will make a wise decision, surprisingly.",
+  "You will discover why they invented the snooze button.",
+  "A great idea will come to you, then disappear.",
   "Today will be calm, unless you open your email.",
-  "You will make a wise decision, surprisingly."
-]
+];
 
+const randomFortune = () => FORTUNES[Math.floor(Math.random() * FORTUNES.length)];
+
+// ─── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [status, setStatus] = useState('idle')
-  const [fortune, setFortune] = useState('')
-  const audioRef = useRef(null)
+  // phase: idle → cracking → revealed
+  const [phase, setPhase] = useState('idle');
+  const [fortune, setFortune] = useState('');
+  const [cookieSrc, setCookieSrc] = useState(null);
+  const audioRef = useRef(null);
+  const cookieControls = useAnimation();
+
+  // Remove white background from cookie image using canvas
+  useEffect(() => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const d = imageData.data;
+
+      // Strip near-white pixels with smooth feathering
+      for (let i = 0; i < d.length; i += 4) {
+        const r = d[i], g = d[i + 1], b = d[i + 2];
+        const brightness = (r + g + b) / 3;
+        // Also check if the pixel is "grayish white" (low saturation)
+        const maxC = Math.max(r, g, b);
+        const minC = Math.min(r, g, b);
+        const saturation = maxC > 0 ? (maxC - minC) / maxC : 0;
+
+        if (brightness > 230 && saturation < 0.1) {
+          // Fully transparent for near-white, low-saturation pixels
+          d[i + 3] = 0;
+        } else if (brightness > 195 && saturation < 0.15) {
+          // Smooth feather edge
+          const alpha = Math.round(((230 - brightness) / 35) * 255);
+          d[i + 3] = Math.min(d[i + 3], Math.max(0, alpha));
+        }
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+      setCookieSrc(canvas.toDataURL('image/png'));
+    };
+    img.src = '/cookie.png';
+  }, []);
 
   useEffect(() => {
-    audioRef.current = new Audio('/crack.mp3')
-    audioRef.current.volume = 0.5
-  }, [])
-
-  const fetchFortune = useCallback(async () => {
-    try {
-      const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY
-      if (!apiKey) throw new Error("No API Key")
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-          model: 'claude-3-5-sonnet-20240620',
-          max_tokens: 100,
-          system: "You are a fortune cookie that gives hilariously terrible, unhinged, brutally honest life advice. Keep it to ONE sentence max. Be deadpan. No emojis. No hashtags. Make it absurd but not try-hard. Examples: \"Someone is thinking about you right now. They are mildly annoyed.\" / \"Your lucky numbers are: none. Try letters.\" / \"A surprise is coming. It is a bill.\" Only return the fortune. Nothing else.",
-          messages: [{ role: 'user', content: 'Give me a fortune.' }]
-        })
-      })
-      if (!response.ok) throw new Error("API Error")
-      const data = await response.json()
-      return data.content[0].text
-    } catch {
-      return FALLBACK_FORTUNES[Math.floor(Math.random() * FALLBACK_FORTUNES.length)]
-    }
-  }, [])
+    audioRef.current = new Audio('/crack.mp3');
+    audioRef.current.volume = 0.45;
+  }, []);
 
   const handleCrack = useCallback(async () => {
-    if (status !== 'idle') return
-    setStatus('shaking')
+    if (phase !== 'idle') return;
+    setPhase('cracking');
 
-    if (audioRef.current) {
-      audioRef.current.currentTime = 0
-      audioRef.current.play().catch(e => console.warn("Audio play blocked", e))
-    }
+    // Play crack sound
+    try { audioRef.current.currentTime = 0; audioRef.current.play().catch(() => { }); } catch (_) { }
 
-    const fortunePromise = fetchFortune()
+    // Shake animation
+    await cookieControls.start({
+      x: [0, -14, 14, -10, 10, -6, 6, 0],
+      rotate: [0, -3, 3, -2, 2, -1, 1, 0],
+      transition: { duration: 0.5, ease: 'easeInOut' },
+    });
 
-    // Simulate crack animation transition
-    setTimeout(async () => {
-      setStatus('loading')
-      const result = await fortunePromise
-      setFortune(result)
-      setTimeout(() => setStatus('revealed'), 1000)
-    }, 800)
-  }, [status, fetchFortune])
+    // Crack — scale down and fade
+    await cookieControls.start({
+      scale: 0,
+      opacity: 0,
+      y: -30,
+      transition: { duration: 0.35, ease: 'easeIn' },
+    });
 
-  const reset = () => {
-    setStatus('idle')
-    setFortune('')
-  }
+    setFortune(randomFortune());
+    setPhase('revealed');
+  }, [phase, cookieControls]);
+
+  const reset = useCallback(async () => {
+    setPhase('idle');
+    setFortune('');
+    cookieControls.set({ scale: 0, opacity: 0, y: 20 });
+    await cookieControls.start({
+      scale: 1,
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+    });
+  }, [cookieControls]);
 
   return (
     <div
-      style={{ fontFamily: "'Playfair Display', serif", background: '#f8f6f2' }}
-      className={`relative w-full h-[100dvh] overflow-hidden flex flex-col items-center justify-center select-none ${status === 'revealed' ? 'cursor-pointer' : ''}`}
-      onClick={status === 'revealed' ? reset : undefined}
+      style={{
+        fontFamily: "'Playfair Display', Georgia, serif",
+        background: 'radial-gradient(ellipse at 50% 40%, #fdf8f0 0%, #ece8e0 100%)',
+        minHeight: '100dvh',
+        overflow: 'hidden',
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        userSelect: 'none',
+      }}
     >
-      {/* Google Font */}
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&display=swap');`}</style>
+      {/* Google Fonts */}
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');`}</style>
 
-      {/* Top Title Overlay */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
+      {/* Decorative ambient glow */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        background: 'radial-gradient(circle at 50% 55%, rgba(215,170,90,0.13) 0%, transparent 65%)',
+        pointerEvents: 'none',
+      }} />
+
+      {/* ── Title ── */}
+      <motion.header
+        initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
-        style={{ color: '#8b5e1a', letterSpacing: '0.4em', fontSize: 'clamp(0.8rem, 2.5vw, 1rem)' }}
-        className="absolute top-12 uppercase italic pointer-events-none z-30 tracking-widest text-center px-4 w-full"
+        transition={{ duration: 1, delay: 0.2 }}
+        style={{
+          position: 'absolute',
+          top: 0, left: 0, right: 0,
+          display: 'flex',
+          justifyContent: 'center',
+          paddingTop: 'clamp(28px, 5vh, 48px)',
+          pointerEvents: 'none',
+          zIndex: 10,
+        }}
       >
-        Unfortunate Fortune Cookie
-      </motion.div>
+        <p style={{
+          letterSpacing: '0.42em',
+          fontSize: 'clamp(0.6rem, 1.8vw, 0.85rem)',
+          color: '#8b5e1a',
+          textTransform: 'uppercase',
+          fontStyle: 'italic',
+          margin: 0,
+        }}>
+          Unfortunate Fortune Cookie
+        </p>
+      </motion.header>
 
-      {/* 3D Scene Container */}
-      <div className="absolute inset-0 z-0">
-        <Scene />
-      </div>
-
-      {/* Interaction Layer */}
-      {status === 'idle' && (
-        <div
-          className="absolute inset-0 z-10 cursor-pointer flex items-center justify-center"
-          onClick={handleCrack}
-        />
-      )}
-
-      {/* Paper Reveal UI Overlay */}
+      {/* ── Cookie image + float idle animation ── */}
       <AnimatePresence>
-        {(status === 'loading' || status === 'revealed') && (
+        {phase !== 'revealed' && (
           <motion.div
-            key="paper-slip"
-            initial={{ y: 200, opacity: 0, scale: 0.8 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: 50, opacity: 0 }}
-            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            key="cookie-container"
             style={{
-              background: '#F5F0E8',
-              backgroundImage: 'repeating-linear-gradient(transparent, transparent 1.6rem, #ddd8cf 1.6rem, #ddd8cf 1.7rem)',
-              boxShadow: '0 20px 60px -15px rgba(0,0,0,0.3)',
-              borderRadius: 4,
-              padding: '2.5rem 3rem',
-              width: '90%',
-              maxWidth: 450,
-              minHeight: 160,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 50,
-              border: '1px solid rgba(0,0,0,0.05)'
+              position: 'relative',
+              zIndex: 5,
+              cursor: phase === 'idle' ? 'pointer' : 'default',
             }}
-            className={status === 'revealed' ? 'cursor-pointer pointer-events-auto' : 'pointer-events-none'}
-            onClick={reset}
+            onClick={handleCrack}
+            animate={cookieControls}
+            initial={{ scale: 1, opacity: 1, y: 0 }}
           >
-            {status === 'loading' ? (
-              <div style={{ display: 'flex', gap: 12 }}>
-                {[0, 0.2, 0.4].map((delay, i) => (
-                  <motion.div
-                    key={i}
-                    animate={{ opacity: [0.3, 1, 0.3], y: [0, -5, 0] }}
-                    transition={{ duration: 1, repeat: Infinity, delay, ease: 'easeInOut' }}
-                    style={{ width: 10, height: 10, borderRadius: '50%', background: '#8b5e1a' }}
-                  />
-                ))}
-              </div>
-            ) : (
+            {/* Soft ground shadow */}
+            <div style={{
+              position: 'absolute',
+              bottom: -20,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '65%',
+              height: 22,
+              background: 'radial-gradient(ellipse, rgba(100,60,10,0.22) 0%, transparent 75%)',
+              borderRadius: '50%',
+              filter: 'blur(6px)',
+            }} />
+
+            {/* Cookie with idle float */}
+            <motion.div
+              animate={phase === 'idle' ? {
+                y: [0, -14, 0],
+                rotate: [0, 1.2, -0.8, 0],
+              } : {}}
+              transition={phase === 'idle' ? {
+                y: { duration: 3.8, repeat: Infinity, ease: 'easeInOut' },
+                rotate: { duration: 5, repeat: Infinity, ease: 'easeInOut' },
+              } : {}}
+            >
+              {cookieSrc ? (
+                <img
+                  src={cookieSrc}
+                  alt="Fortune Cookie"
+                  draggable={false}
+                  style={{
+                    width: 'clamp(200px, 38vw, 360px)',
+                    height: 'auto',
+                    display: 'block',
+                    filter: 'drop-shadow(0 20px 34px rgba(100,60,10,0.38)) drop-shadow(0 5px 10px rgba(100,60,10,0.2))',
+                  }}
+                />
+              ) : null}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Idle hint ── */}
+      <AnimatePresence>
+        {phase === 'idle' && (
+          <motion.p
+            key="hint"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0.3, 0.7, 0.3] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
+            style={{
+              marginTop: 'clamp(20px, 4vh, 36px)',
+              letterSpacing: '0.44em',
+              fontSize: 'clamp(0.6rem, 1.6vw, 0.8rem)',
+              color: '#9b6a1e',
+              textTransform: 'uppercase',
+              zIndex: 10,
+            }}
+          >
+            Click to crack
+          </motion.p>
+        )}
+      </AnimatePresence>
+
+      {/* ── Cracking loader dots ── */}
+      <AnimatePresence>
+        {phase === 'cracking' && (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ display: 'flex', gap: 14, marginTop: 20, zIndex: 10 }}
+          >
+            {[0, 0.18, 0.36].map((delay, i) => (
+              <motion.div
+                key={i}
+                animate={{ y: [0, -10, 0], opacity: [0.4, 1, 0.4] }}
+                transition={{ duration: 0.85, repeat: Infinity, delay, ease: 'easeInOut' }}
+                style={{ width: 10, height: 10, borderRadius: '50%', background: '#a06820' }}
+              />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Fortune paper slip ── */}
+      <AnimatePresence>
+        {phase === 'revealed' && (
+          <motion.div
+            key="paper"
+            initial={{ y: 60, opacity: 0, scale: 0.9 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: 30, opacity: 0 }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            style={{ zIndex: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}
+          >
+            {/* Paper card */}
+            <div
+              onClick={reset}
+              style={{
+                background: '#fdfbf4',
+                backgroundImage: 'repeating-linear-gradient(transparent, transparent 1.55rem, #ddd6c4 1.55rem, #ddd6c4 1.63rem)',
+                boxShadow: '0 20px 60px -10px rgba(100,55,10,0.28), 0 6px 16px -4px rgba(100,55,10,0.14)',
+                borderRadius: 4,
+                padding: 'clamp(1.6rem, 4vw, 2.4rem) clamp(2rem, 5vw, 3rem)',
+                width: 'min(88vw, 440px)',
+                minHeight: 140,
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 20,
+                position: 'relative',
+                // Subtle paper curl top-left
+                borderTop: '1px solid rgba(180,160,120,0.3)',
+              }}
+            >
+              {/* Paper ribbon top */}
+              <div style={{
+                position: 'absolute',
+                top: -1, left: '15%', right: '15%',
+                height: 2,
+                background: 'linear-gradient(90deg, transparent, rgba(190,160,110,0.5), transparent)',
+              }} />
+
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.8 }}
+                transition={{ duration: 0.7, delay: 0.15 }}
                 style={{
-                  color: '#2a1a0a',
+                  color: '#2a1a06',
                   fontStyle: 'italic',
-                  fontSize: 'clamp(1.1rem, 4vw, 1.4rem)',
+                  fontSize: 'clamp(1rem, 3.2vw, 1.3rem)',
+                  lineHeight: 1.7,
                   textAlign: 'center',
-                  lineHeight: '1.6',
                   margin: 0,
-                  fontWeight: 500
                 }}
               >
                 {fortune}
               </motion.p>
-            )}
+
+              <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.7 }}
+                style={{
+                  fontSize: '0.65rem',
+                  letterSpacing: '0.38em',
+                  textTransform: 'uppercase',
+                  color: '#a07830',
+                  fontStyle: 'normal',
+                }}
+              >
+                tap to try again
+              </motion.span>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Tap Hint Overlay */}
-      <AnimatePresence>
-        {status === 'idle' && (
-          <motion.div
-            key="hint"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: [0.2, 0.5, 0.2] }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 3, repeat: Infinity }}
-            style={{ color: '#8b5e1a', letterSpacing: '0.4em', fontSize: 13, textTransform: 'uppercase', bottom: '15dvh' }}
-            className="absolute z-40 pointer-events-none font-sans"
-          >
-            Click to discover your fate
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Footer Branding */}
-      <div style={{ color: 'rgba(0,0,0,0.15)', fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', bottom: '6dvh' }}
-        className="absolute z-30 pointer-events-none font-sans">
-        Premium Experience by Moegical
-      </div>
+      {/* ── Footer ── */}
+      <footer style={{
+        position: 'absolute',
+        bottom: 0, left: 0, right: 0,
+        display: 'flex',
+        justifyContent: 'center',
+        paddingBottom: 'clamp(16px, 3vh, 28px)',
+        pointerEvents: 'none',
+        zIndex: 10,
+      }}>
+        <p style={{
+          fontSize: '0.58rem',
+          letterSpacing: '0.32em',
+          textTransform: 'uppercase',
+          color: 'rgba(0,0,0,0.18)',
+          fontFamily: 'sans-serif',
+          margin: 0,
+        }}>
+          Developed by Moegical
+        </p>
+      </footer>
     </div>
-  )
+  );
 }
-

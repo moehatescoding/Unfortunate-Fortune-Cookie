@@ -1,93 +1,91 @@
-import React, { Suspense } from 'react';
+import { Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
 import {
     OrbitControls,
-    PerspectiveCamera,
     ContactShadows,
     Environment,
-    Center,
-    Float
 } from '@react-three/drei';
 import { FortuneCookieModel } from './FortuneCookie';
 
 /**
- * Scene component providing the environment, lighting, and camera.
+ * Scene: cinematic 3-point lighting, soft shadow, orbit controls.
  */
-export const Scene = () => {
+export function Scene({ onCookieClick }) {
     return (
         <Canvas
             shadows
-            dpr={[1, 2]}
-            gl={{ antialias: true, alpha: true }}
+            dpr={[1, 1.5]}
+            gl={{ antialias: true }}
+            camera={{ position: [0, 0.4, 5], fov: 38, near: 0.1, far: 100 }}
         >
-            {/* Background Color */}
-            <color attach="background" args={['#f8f6f2']} />
+            {/* Studio-warm off-white background */}
+            <color attach="background" args={['#f5f3ee']} />
 
-            {/* Cinematic Lighting Setup */}
-            <ambientLight intensity={0.5} />
+            {/* ── Lighting ── */}
+            {/* Ambient – fill the whole scene lightly */}
+            <ambientLight intensity={1.2} color="#fff8f0" />
 
-            {/* Key Light: Warm and directional */}
-            <spotLight
-                position={[5, 10, 5]}
-                angle={0.25}
-                penumbra={1}
-                intensity={150}
+            {/* Key light – warm, from above-left */}
+            <directionalLight
+                position={[4, 8, 5]}
+                intensity={3}
+                color="#ffe8c0"
                 castShadow
-                color="#fff4e0"
                 shadow-mapSize={[1024, 1024]}
+                shadow-camera-near={0.1}
+                shadow-camera-far={20}
+                shadow-camera-left={-5}
+                shadow-camera-right={5}
+                shadow-camera-top={5}
+                shadow-camera-bottom={-5}
+                shadow-bias={-0.001}
             />
 
-            {/* Fill Light: Softer and cooler */}
-            <pointLight position={[-5, 5, -5]} intensity={50} color="#e0f4ff" />
+            {/* Fill light – cooler, from the right */}
+            <directionalLight position={[-5, 3, 2]} intensity={1.2} color="#e8f4ff" />
 
-            {/* Rim Light: Highlights the edges */}
-            <pointLight position={[0, 2, -10]} intensity={30} color="#ffffff" />
+            {/* Rim light – highlights cookie edge from behind */}
+            <pointLight position={[0, 2, -6]} intensity={2} color="#fff5e0" />
 
-            {/* Camera */}
-            <PerspectiveCamera makeDefault position={[0, 0, 5]} fov={40} />
-
-            {/* Realistic Shadow */}
-            <ContactShadows
-                position={[0, -1.2, 0]}
-                opacity={0.4}
-                scale={10}
-                blur={2.5}
-                far={2}
-                resolution={512}
-                color="#4b3621"
-            />
-
+            {/* ── Cookie ── */}
             <Suspense fallback={null}>
-                <Center top position={[0, -0.4, 0]}>
-                    <Float
-                        speed={1.5}
-                        rotationIntensity={0.5}
-                        floatIntensity={0.5}
-                    >
-                        <FortuneCookieModel
-                            width={1.5}
-                            foldDepth={0.8}
-                            pinch={1.6}
-                            thickness={0.06}
-                            toastIntensity={1.2}
-                        />
-                    </Float>
-                </Center>
+                <FortuneCookieModel
+                    position={[0, 0, 0]}
+                    width={1.8}
+                    foldDepth={1.1}
+                    pinch={1.7}
+                    thickness={0.055}
+                    toastIntensity={1.1}
+                    onPointerDown={onCookieClick}
+                />
 
-                {/* Subtle environment map for material reflections */}
-                <Environment preset="studio" />
+                {/* Soft contact shadow on "floor" */}
+                <ContactShadows
+                    position={[0, -1.4, 0]}
+                    opacity={0.35}
+                    scale={8}
+                    blur={2}
+                    far={2.5}
+                    resolution={512}
+                    color="#4a3018"
+                />
+
+                {/* HDR environment for PBR reflections */}
+                <Environment preset="apartment" />
             </Suspense>
 
-            {/* Controls */}
+            {/* ── Orbit Controls ── */}
             <OrbitControls
-                enablePan={false}
-                minPolarAngle={Math.PI / 4}
-                maxPolarAngle={Math.PI / 1.5}
-                minDistance={3}
-                maxDistance={8}
-                autoRotate={false}
                 makeDefault
+                enablePan={false}
+                minDistance={3}
+                maxDistance={9}
+                minPolarAngle={Math.PI / 6}
+                maxPolarAngle={Math.PI / 1.8}
+                target={[0, 0, 0]}
+                enableDamping
+                dampingFactor={0.08}
             />
         </Canvas>
     );
-};
+}
