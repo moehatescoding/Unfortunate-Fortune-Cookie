@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react'
+import React, { useState, useCallback, useRef, useEffect, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Scene } from './components/Scene'
 
 const FALLBACK_FORTUNES = [
   "You will soon receive good news. It might be meant for someone else.",
@@ -77,180 +78,6 @@ const FALLBACK_FORTUNES = [
   "You will make a wise decision, surprisingly."
 ]
 
-// Premium SVG Fortune Cookie with 3D shading
-const CookieSVG = () => (
-  <svg viewBox="0 0 240 200" xmlns="http://www.w3.org/2000/svg" style={{ overflow: 'visible' }}>
-    <defs>
-      {/* Main gradient — golden brown 3D look */}
-      <radialGradient id="cookieBody" cx="45%" cy="38%" r="58%" fx="35%" fy="30%">
-        <stop offset="0%" stopColor="#F5C842" />
-        <stop offset="30%" stopColor="#E8A830" />
-        <stop offset="65%" stopColor="#C9873A" />
-        <stop offset="100%" stopColor="#8B5E1A" />
-      </radialGradient>
-      {/* Edge darkening */}
-      <radialGradient id="cookieEdge" cx="50%" cy="50%" r="50%">
-        <stop offset="60%" stopColor="transparent" />
-        <stop offset="100%" stopColor="#5C3000" stopOpacity="0.5" />
-      </radialGradient>
-      {/* Inner highlight */}
-      <radialGradient id="cookieHighlight" cx="35%" cy="30%" r="40%">
-        <stop offset="0%" stopColor="#FFF5C0" stopOpacity="0.6" />
-        <stop offset="100%" stopColor="#FFF5C0" stopOpacity="0" />
-      </radialGradient>
-      {/* Drop shadow filter */}
-      <filter id="cookieShadow" x="-20%" y="-20%" width="140%" height="160%">
-        <feDropShadow dx="0" dy="12" stdDeviation="14" floodColor="#000" floodOpacity="0.5" />
-      </filter>
-      {/* Subtle inner glow */}
-      <filter id="innerGlow">
-        <feGaussianBlur stdDeviation="3" result="blur" />
-        <feComposite in="SourceGraphic" in2="blur" operator="over" />
-      </filter>
-    </defs>
-
-    {/* Drop shadow layer */}
-    <ellipse cx="120" cy="192" rx="70" ry="10" fill="#000" opacity="0.3" />
-
-    {/* Cookie body — classic folded shape */}
-    <g filter="url(#cookieShadow)">
-      {/* Left wing */}
-      <path
-        d="M 120 55
-           C 60 52, 28 78, 32 118
-           C 35 148, 62 168, 90 170
-           C 105 172, 115 165, 120 155"
-        fill="url(#cookieBody)"
-      />
-      {/* Right wing */}
-      <path
-        d="M 120 55
-           C 180 52, 212 78, 208 118
-           C 205 148, 178 168, 150 170
-           C 135 172, 125 165, 120 155"
-        fill="url(#cookieBody)"
-      />
-      {/* Center fold / pinch */}
-      <path
-        d="M 120 55 C 110 90, 108 115, 120 155
-           C 132 115, 130 90, 120 55"
-        fill="#A06828"
-        opacity="0.7"
-      />
-    </g>
-
-    {/* Highlight overlay */}
-    <path
-      d="M 120 55
-         C 60 52, 28 78, 32 118
-         C 35 148, 62 168, 90 170
-         C 105 172, 115 165, 120 155
-         C 132 115, 130 90, 120 55"
-      fill="url(#cookieHighlight)"
-    />
-    <path
-      d="M 120 55
-         C 180 52, 212 78, 208 118
-         C 205 148, 178 168, 150 170
-         C 135 172, 125 165, 120 155
-         C 132 115, 130 90, 120 55"
-      fill="url(#cookieHighlight)"
-    />
-
-    {/* Edge darkening */}
-    <path
-      d="M 120 55
-         C 60 52, 28 78, 32 118
-         C 35 148, 62 168, 90 170
-         C 105 172, 115 165, 120 155
-         C 125 165, 135 172, 150 170
-         C 178 168, 205 148, 208 118
-         C 212 78, 180 52, 120 55 Z"
-      fill="url(#cookieEdge)"
-    />
-
-    {/* Fold crease lines */}
-    <path d="M 120 55 C 114 90, 112 120, 120 155"
-      stroke="#7A4E10" strokeWidth="1.5" fill="none" opacity="0.8" strokeLinecap="round" />
-    <path d="M 120 55 C 126 90, 128 120, 120 155"
-      stroke="#C8902A" strokeWidth="1" fill="none" opacity="0.5" strokeLinecap="round" />
-
-    {/* Left wing inner crease */}
-    <path d="M 100 60 C 75 75, 62 110, 75 148"
-      stroke="#8B6020" strokeWidth="1.2" fill="none" opacity="0.4" strokeLinecap="round" />
-
-    {/* Right wing inner crease */}
-    <path d="M 140 60 C 165 75, 178 110, 165 148"
-      stroke="#8B6020" strokeWidth="1.2" fill="none" opacity="0.4" strokeLinecap="round" />
-
-    {/* Paper slip peeking */}
-    <rect x="112" y="72" width="16" height="22" rx="1"
-      fill="#F5F0E8" opacity="0.85"
-      stroke="#DDD5C0" strokeWidth="0.5" />
-    <line x1="115" y1="78" x2="125" y2="78" stroke="#C8B88A" strokeWidth="0.8" opacity="0.6" />
-    <line x1="115" y1="83" x2="125" y2="83" stroke="#C8B88A" strokeWidth="0.8" opacity="0.6" />
-    <line x1="115" y1="88" x2="125" y2="88" stroke="#C8B88A" strokeWidth="0.8" opacity="0.6" />
-  </svg>
-)
-
-// Left half only (for break animation)
-const CookieLeftSVG = () => (
-  <svg viewBox="0 0 240 200" xmlns="http://www.w3.org/2000/svg" style={{ overflow: 'visible' }}>
-    <defs>
-      <radialGradient id="cbL" cx="40%" cy="38%" r="65%" fx="30%" fy="28%">
-        <stop offset="0%" stopColor="#F5C842" />
-        <stop offset="35%" stopColor="#E8A830" />
-        <stop offset="70%" stopColor="#C9873A" />
-        <stop offset="100%" stopColor="#8B5E1A" />
-      </radialGradient>
-      <filter id="shadowL" x="-30%" y="-20%" width="160%" height="160%">
-        <feDropShadow dx="-4" dy="8" stdDeviation="10" floodColor="#000" floodOpacity="0.4" />
-      </filter>
-    </defs>
-    <g filter="url(#shadowL)">
-      <path
-        d="M 120 55
-           C 60 52, 28 78, 32 118
-           C 35 148, 62 168, 90 170
-           C 105 172, 115 165, 120 155
-           C 114 120, 112 90, 120 55"
-        fill="url(#cbL)"
-      />
-    </g>
-    <path d="M 120 55 C 114 90, 112 120, 120 155"
-      stroke="#7A4E10" strokeWidth="1.5" fill="none" opacity="0.8" strokeLinecap="round" />
-  </svg>
-)
-
-// Right half only
-const CookieRightSVG = () => (
-  <svg viewBox="0 0 240 200" xmlns="http://www.w3.org/2000/svg" style={{ overflow: 'visible' }}>
-    <defs>
-      <radialGradient id="cbR" cx="60%" cy="38%" r="65%" fx="70%" fy="28%">
-        <stop offset="0%" stopColor="#F5C842" />
-        <stop offset="35%" stopColor="#E8A830" />
-        <stop offset="70%" stopColor="#C9873A" />
-        <stop offset="100%" stopColor="#8B5E1A" />
-      </radialGradient>
-      <filter id="shadowR" x="-30%" y="-20%" width="160%" height="160%">
-        <feDropShadow dx="4" dy="8" stdDeviation="10" floodColor="#000" floodOpacity="0.4" />
-      </filter>
-    </defs>
-    <g filter="url(#shadowR)">
-      <path
-        d="M 120 55
-           C 180 52, 212 78, 208 118
-           C 205 148, 178 168, 150 170
-           C 135 172, 125 165, 120 155
-           C 128 120, 130 90, 120 55"
-        fill="url(#cbR)"
-      />
-    </g>
-    <path d="M 120 55 C 126 90, 128 120, 120 155"
-      stroke="#C8902A" strokeWidth="1" fill="none" opacity="0.8" strokeLinecap="round" />
-  </svg>
-)
-
 export default function App() {
   const [status, setStatus] = useState('idle')
   const [fortune, setFortune] = useState('')
@@ -274,7 +101,7 @@ export default function App() {
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-3-5-sonnet-20240620',
           max_tokens: 100,
           system: "You are a fortune cookie that gives hilariously terrible, unhinged, brutally honest life advice. Keep it to ONE sentence max. Be deadpan. No emojis. No hashtags. Make it absurd but not try-hard. Examples: \"Someone is thinking about you right now. They are mildly annoyed.\" / \"Your lucky numbers are: none. Try letters.\" / \"A surprise is coming. It is a bill.\" Only return the fortune. Nothing else.",
           messages: [{ role: 'user', content: 'Give me a fortune.' }]
@@ -298,15 +125,14 @@ export default function App() {
     }
 
     const fortunePromise = fetchFortune()
-    setTimeout(() => {
-      setStatus('breaking')
-      setTimeout(async () => {
-        setStatus('loading')
-        const result = await fortunePromise
-        setFortune(result)
-        setTimeout(() => setStatus('revealed'), 800)
-      }, 600)
-    }, 400)
+
+    // Simulate crack animation transition
+    setTimeout(async () => {
+      setStatus('loading')
+      const result = await fortunePromise
+      setFortune(result)
+      setTimeout(() => setStatus('revealed'), 1000)
+    }, 800)
   }, [status, fetchFortune])
 
   const reset = () => {
@@ -316,125 +142,72 @@ export default function App() {
 
   return (
     <div
-      style={{ fontFamily: "'Playfair Display', serif", background: '#0a0a0a' }}
+      style={{ fontFamily: "'Playfair Display', serif", background: '#f8f6f2' }}
       className={`relative w-full h-[100dvh] overflow-hidden flex flex-col items-center justify-center select-none ${status === 'revealed' ? 'cursor-pointer' : ''}`}
       onClick={status === 'revealed' ? reset : undefined}
     >
       {/* Google Font */}
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&display=swap');`}</style>
 
-      {/* Subtle ambient glow behind cookie */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div style={{
-          width: 340, height: 340, background: 'radial-gradient(circle, rgba(201,151,58,0.12) 0%, transparent 70%)',
-          borderRadius: '50%'
-        }} />
-      </div>
-
-      {/* Top label */}
-      <div style={{ color: 'rgba(201,151,58,0.7)', letterSpacing: '0.4em', fontSize: 'clamp(0.9rem, 3.5vw, 1.1rem)' }}
-        className="absolute top-12 uppercase italic pointer-events-none z-30 tracking-widest text-center px-4 w-full">
-        Unfortunate Fortune Cookie
-      </div>
-
-      {/* Cookie + Break halves */}
-      <div
-        className="relative z-10 cursor-pointer"
-        onClick={handleCrack}
-        style={{ width: 280, height: 240, WebkitTapHighlightColor: 'transparent' }}
+      {/* Top Title Overlay */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        style={{ color: '#8b5e1a', letterSpacing: '0.4em', fontSize: 'clamp(0.8rem, 2.5vw, 1rem)' }}
+        className="absolute top-12 uppercase italic pointer-events-none z-30 tracking-widest text-center px-4 w-full"
       >
-        <AnimatePresence mode="wait">
-          {(status === 'idle' || status === 'shaking') && (
-            <motion.div
-              key="whole-cookie"
-              initial={{ scale: 0.85, opacity: 0 }}
-              animate={status === 'shaking' ? {
-                scale: 1,
-                opacity: 1,
-                x: [0, -6, 6, -5, 5, -3, 3, 0],
-                rotate: [0, -2, 2, -1.5, 1.5, 0],
-              } : {
-                scale: 1,
-                opacity: 1,
-                y: [0, -8, 0],
-              }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={status === 'shaking'
-                ? { duration: 0.4, ease: 'easeInOut' }
-                : { y: { duration: 3.5, repeat: Infinity, ease: 'easeInOut' }, opacity: { duration: 0.4 }, scale: { duration: 0.4 } }
-              }
-              style={{ width: '100%', height: '100%' }}
-            >
-              <CookieSVG />
-            </motion.div>
-          )}
+        Unfortunate Fortune Cookie
+      </motion.div>
 
-          {(status === 'breaking' || status === 'loading' || status === 'revealed') && (
-            <motion.div
-              key="broken-cookie"
-              initial={{ opacity: 1 }}
-              animate={{ opacity: 0 }}
-              transition={{ duration: 0.7, delay: 0.4 }}
-              style={{ width: '100%', height: '100%', position: 'relative' }}
-            >
-              {/* Left half */}
-              <motion.div
-                initial={{ x: 0, y: 0, rotate: 0, opacity: 1 }}
-                animate={{ x: -130, y: -50, rotate: -40, opacity: 0 }}
-                transition={{ duration: 0.65, ease: [0.4, 0, 0.2, 1] }}
-                style={{ position: 'absolute', width: '100%', height: '100%' }}
-              >
-                <CookieLeftSVG />
-              </motion.div>
-              {/* Right half */}
-              <motion.div
-                initial={{ x: 0, y: 0, rotate: 0, opacity: 1 }}
-                animate={{ x: 130, y: -50, rotate: 40, opacity: 0 }}
-                transition={{ duration: 0.65, ease: [0.4, 0, 0.2, 1] }}
-                style={{ position: 'absolute', width: '100%', height: '100%' }}
-              >
-                <CookieRightSVG />
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      {/* 3D Scene Container */}
+      <div className="absolute inset-0 z-0">
+        <Scene />
       </div>
 
-      {/* Paper slip */}
+      {/* Interaction Layer */}
+      {status === 'idle' && (
+        <div
+          className="absolute inset-0 z-10 cursor-pointer flex items-center justify-center"
+          onClick={handleCrack}
+        />
+      )}
+
+      {/* Paper Reveal UI Overlay */}
       <AnimatePresence>
         {(status === 'loading' || status === 'revealed') && (
           <motion.div
             key="paper-slip"
-            initial={{ y: -30, scaleY: 0, opacity: 0 }}
-            animate={{ y: 0, scaleY: 1, opacity: 1 }}
-            exit={{ y: 20, opacity: 0 }}
-            transition={{ duration: 0.7, ease: [0.175, 0.885, 0.32, 1.275], delay: 0.3 }}
+            initial={{ y: 200, opacity: 0, scale: 0.8 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: 50, opacity: 0 }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             style={{
-              transformOrigin: 'top center',
               background: '#F5F0E8',
               backgroundImage: 'repeating-linear-gradient(transparent, transparent 1.6rem, #ddd8cf 1.6rem, #ddd8cf 1.7rem)',
-              boxShadow: '0 12px 45px -8px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.8)',
-              borderRadius: 2,
-              padding: '1.7rem 2rem',
-              width: '85%',
-              maxWidth: 360,
-              minHeight: 130,
+              boxShadow: '0 20px 60px -15px rgba(0,0,0,0.3)',
+              borderRadius: 4,
+              padding: '2.5rem 3rem',
+              width: '90%',
+              maxWidth: 450,
+              minHeight: 160,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
+              zIndex: 50,
+              border: '1px solid rgba(0,0,0,0.05)'
             }}
-            className={`absolute z-20 ${status === 'revealed' ? 'cursor-pointer pointer-events-auto' : 'pointer-events-none'}`}
-            onClick={status === 'revealed' ? reset : undefined}
+            className={status === 'revealed' ? 'cursor-pointer pointer-events-auto' : 'pointer-events-none'}
+            onClick={reset}
           >
             {status === 'loading' ? (
-              <div style={{ display: 'flex', gap: 10, padding: '8px 0' }}>
+              <div style={{ display: 'flex', gap: 12 }}>
                 {[0, 0.2, 0.4].map((delay, i) => (
                   <motion.div
                     key={i}
-                    animate={{ opacity: [0.3, 1, 0.3], scale: [0.9, 1.2, 0.9] }}
+                    animate={{ opacity: [0.3, 1, 0.3], y: [0, -5, 0] }}
                     transition={{ duration: 1, repeat: Infinity, delay, ease: 'easeInOut' }}
-                    style={{ width: 8, height: 8, borderRadius: '50%', background: '#C9973A' }}
+                    style={{ width: 10, height: 10, borderRadius: '50%', background: '#8b5e1a' }}
                   />
                 ))}
               </div>
@@ -442,15 +215,15 @@ export default function App() {
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
+                transition={{ duration: 0.8 }}
                 style={{
-                  color: '#1a1a1a',
+                  color: '#2a1a0a',
                   fontStyle: 'italic',
-                  fontSize: '1.1rem',
+                  fontSize: 'clamp(1.1rem, 4vw, 1.4rem)',
                   textAlign: 'center',
-                  lineHeight: '1.7rem',
+                  lineHeight: '1.6',
                   margin: 0,
-                  transform: 'translateY(-0.15rem)',
+                  fontWeight: 500
                 }}
               >
                 {fortune}
@@ -460,60 +233,29 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Tap hint */}
+      {/* Tap Hint Overlay */}
       <AnimatePresence>
         {status === 'idle' && (
           <motion.div
             key="hint"
             initial={{ opacity: 0 }}
-            animate={{ opacity: [0.3, 0.6, 0.3] }}
-            exit={{ opacity: 0, transition: { duration: 0.2 } }}
-            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-            style={{ color: 'rgba(201,151,58,0.5)', letterSpacing: '0.4em', fontSize: 18, textTransform: 'uppercase' }}
-            className="absolute bottom-28 z-30 pointer-events-none"
+            animate={{ opacity: [0.2, 0.5, 0.2] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 3, repeat: Infinity }}
+            style={{ color: '#8b5e1a', letterSpacing: '0.4em', fontSize: 13, textTransform: 'uppercase', bottom: '15dvh' }}
+            className="absolute z-40 pointer-events-none font-sans"
           >
-            tap to crack
+            Click to discover your fate
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Another one button */}
-      <AnimatePresence>
-        {status === 'revealed' && (
-          <motion.button
-            key="another"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5, delay: 1.0 }}
-            onClick={reset}
-            className="absolute bottom-28 z-40"
-            style={{
-              padding: '12px 40px',
-              border: '1px solid #C9973A',
-              color: '#C9973A',
-              background: 'transparent',
-              borderRadius: 999,
-              fontSize: 10,
-              letterSpacing: '0.4em',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              transition: 'background 0.4s, color 0.4s',
-              WebkitTapHighlightColor: 'transparent',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#C9973A'; e.currentTarget.style.color = '#0a0a0a' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#C9973A' }}
-          >
-            Another one
-          </motion.button>
-        )}
-      </AnimatePresence>
-
-      {/* Footer */}
-      <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: 11, letterSpacing: '0.35em', textTransform: 'uppercase', fontFamily: 'sans-serif' }}
-        className="absolute bottom-10 z-30 pointer-events-none">
-        Developed By Moegical
+      {/* Footer Branding */}
+      <div style={{ color: 'rgba(0,0,0,0.15)', fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', bottom: '6dvh' }}
+        className="absolute z-30 pointer-events-none font-sans">
+        Premium Experience by Moegical
       </div>
     </div>
   )
 }
+
